@@ -1,8 +1,9 @@
 import Ember from 'ember';
 import FormGroup from 'ember-bootstrap/components/bs-form-group';
 import Form from 'ember-bootstrap/components/bs-form';
+import ComponentChild from 'ember-bootstrap/mixins/component-child';
 
-const { computed, defineProperty } = Ember;
+const { computed, defineProperty, isArray, observer, on, run, warn } = Ember;
 
 const nonTextFieldControlTypes = Ember.A([
   'checkbox',
@@ -42,7 +43,8 @@ const nonTextFieldControlTypes = Ember.A([
  ```
 
  By using this indirection in comparison to directly binding the `value` property, you get the benefit of automatic
- form validation, given that your `model` is implementing [ember-validations](https://github.com/dockyard/ember-validations).
+ form validation, given that your `model` has a supported means of validating itself.
+ See [Components.Form](Components.Form.html) for details on how to enable form validation.
 
  In the example above the `model` was our controller itself, so the control elements were bound to the appropriate
  properties of our controller. A controller implementing validations on those properties could look like this:
@@ -82,6 +84,9 @@ const nonTextFieldControlTypes = Ember.A([
  * the `errorIcon` feedback icon is displayed if `controlType` is a text field
  * the validation messages are displayed as Bootstrap `help-block`s
 
+ The same applies for warning messages, if the used validation library supports this. (Currently only
+ [ember-cp-validations](https://github.com/offirgolan/ember-cp-validations))
+
  As soon as the validation is successful again...
 
  * `validation` is set to 'success', which will set the `has-success` CSS class
@@ -96,22 +101,29 @@ const nonTextFieldControlTypes = Ember.A([
 
  ```hbs
  {{#bs-form formLayout="horizontal" model=this action="submit"}}
-   {{#bs-form-element label="Select-2" property="gender" as |value id|}}
+   {{#bs-form-element label="Select-2" property="gender" useIcons=false as |value id validationState|}}
      {{select-2 id=id content=genderChoices optionLabelPath="label" value=value searchEnabled=false}}
    {{/bs-form-element}}
  {{/bs-form}}
  ```
+
+ If your custom control does not render an input element, you should set `useIcons` to `false` since bootstrap only supports
+ feedback icons with textual `<input class="form-control">` elements.
 
  @class FormElement
  @namespace Components
  @extends Components.FormGroup
  @public
  */
-export default FormGroup.extend({
+export default FormGroup.extend(ComponentChild, {
   classNameBindings: ['disabled:is-disabled', 'required:is-required', 'isValidating'],
 
   /**
    * Text to display within a `<label>` tag.
+   *
+   * You should include a label for every form input cause otherwise screen readers
+   * will have trouble with your forms. Use `invisibleLabel` property if you want
+   * to hide them.
    *
    * @property label
    * @type string
@@ -120,12 +132,21 @@ export default FormGroup.extend({
   label: null,
 
   /**
+   * Controls label visibilty by adding 'sr-only' class.
+   *
+   * @property invisibleLabel
+   * @type boolean
+   * @public
+   */
+  invisibleLabel: false,
+
+  /**
    * The type of the control widget.
    * Supported types:
    *
    * * 'text'
    * * 'checkbox'
-   * * 'select'
+   * * 'select' (deprecated)
    * * 'textarea'
    * * any other type will use an input tag with the `controlType` value as the type attribute (for e.g. HTML5 input
    * types like 'email'), and the same layout as the 'text' type
@@ -270,7 +291,7 @@ export default FormGroup.extend({
    * @property model
    * @public
    */
-  model: computed.alias('form.model'),
+  model: computed.reads('form.model'),
 
   /**
    * The array of error messages from the `model`'s validation.
@@ -288,6 +309,48 @@ export default FormGroup.extend({
    * @protected
    */
   hasErrors: computed.gt('errors.length', 0),
+
+  /**
+   * The array of warning messages from the `model`'s validation.
+   *
+   * @property errors
+   * @type array
+   * @protected
+   */
+  warnings: null,
+
+  /**
+   * @property hasWarnings
+   * @type boolean
+   * @readonly
+   * @protected
+   */
+  hasWarnings: computed.gt('warnings.length', 0),
+
+  /**
+   * The array of validation messages (either errors or warnings) rom the `model`'s validation.
+   *
+   * @property validationMessages
+   * @type array
+   * @protected
+   */
+  validationMessages: computed('hasErrors', 'hasWarnings', 'errors.[]', 'warnings.[]', function() {
+    if (this.get('hasErrors')) {
+      return this.get('errors');
+    }
+    if (this.get('hasWarnings')) {
+      return this.get('warnings');
+    }
+    return null;
+  }),
+
+  /**
+   * @property hasValidationMessages
+   * @type boolean
+   * @readonly
+   * @protected
+   */
+  hasValidationMessages: computed.gt('validationMessages.length', 0),
 
   /**
    * @property hasValidator
@@ -318,12 +381,63 @@ export default FormGroup.extend({
   showValidation: false,
 
   /**
-   * @property showErrors
+   * @property showValidationMessages
    * @type boolean
    * @readonly
    * @protected
    */
-  showErrors: computed.and('showValidation', 'hasErrors'),
+  showValidationMessages: computed.and('showValidation', 'hasValidationMessages'),
+
+  /**
+   * Event or list of events which enable form validation markup rendering.
+   * Supported events: ['focusOut', 'change']
+   *
+   * @property showValidationOn
+   * @type string|array
+   * @default ['focusOut']
+   * @public
+   */
+  showValidationOn: ['focusOut'],
+
+  /**
+   * @property _showValidationOn
+   * @type array
+   * @readonly
+   * @private
+   */
+  _showValidationOn: computed('showValidationOn', function() {
+    let showValidationOn = this.get('showValidationOn');
+
+    if (isArray(showValidationOn)) {
+      return showValidationOn;
+    }
+
+    if (typeof showValidationOn.toString === 'function') {
+      return [showValidationOn];
+    }
+
+    warn('showValidationOn must be a String or an Array');
+    return [];
+  }),
+
+  /**
+   * @method showValidationOnHandler
+   * @private
+   */
+  showValidationOnHandler(event) {
+    if (this.get('_showValidationOn').indexOf(event) !== -1) {
+      this.set('showValidation', true);
+    }
+  },
+
+  /**
+   * @property showErrors
+   * @type boolean
+   * @readonly
+   * @deprecated
+   * @protected
+   */
+  showErrors: computed.deprecatingAlias('showValidationMessages'),
 
   /**
    * The validation ("error" or "success") or null if no validation is to be shown. Automatically computed from the
@@ -334,11 +448,11 @@ export default FormGroup.extend({
    * @type string
    * @protected
    */
-  validation: computed('hasErrors', 'hasValidator', 'showValidation', 'isValidating', 'disabled', function() {
+  validation: computed('hasErrors', 'hasWarnings', 'hasValidator', 'showValidation', 'isValidating', 'disabled', function() {
     if (!this.get('showValidation') || !this.get('hasValidator') || this.get('isValidating') || this.get('disabled')) {
       return null;
     }
-    return this.get('hasErrors') ? 'error' : 'success';
+    return this.get('hasErrors') ? 'error' : (this.get('hasWarnings') ? 'warning' : 'success');
   }),
 
   /**
@@ -358,7 +472,7 @@ export default FormGroup.extend({
    * @public
    */
   useIcons: computed('controlType', function() {
-    return !nonTextFieldControlTypes.contains(this.get('controlType'));
+    return !nonTextFieldControlTypes.includes(this.get('controlType'));
   }),
 
   /**
@@ -469,7 +583,7 @@ export default FormGroup.extend({
     let controlType = this.get('controlType');
 
     switch (true) {
-      case nonTextFieldControlTypes.contains(controlType):
+      case nonTextFieldControlTypes.includes(controlType):
         inputLayout = controlType;
         break;
       default:
@@ -490,13 +604,24 @@ export default FormGroup.extend({
 
   /**
    * Listen for focusOut events from the control element to automatically set `showValidation` to true to enable
-   * form validation markup rendering.
+   * form validation markup rendering if `showValidationsOn` contains `focusOut`.
    *
    * @event focusOut
    * @private
    */
   focusOut() {
-    this.set('showValidation', true);
+    this.showValidationOnHandler('focusOut');
+  },
+
+  /**
+   * Listen for change events from the control element to automatically set `showValidation` to true to enable
+   * form validation markup rendering if `showValidationsOn` contains `change`.
+   *
+   * @event change
+   * @private
+   */
+  change() {
+    this.showValidationOnHandler('change');
   },
 
   init() {
@@ -505,5 +630,49 @@ export default FormGroup.extend({
       defineProperty(this, 'value', computed.alias(`model.${this.get('property')}`));
       this.setupValidations();
     }
-  }
+  },
+
+  /*
+   * adjust feedback icon position
+   *
+   * Bootstrap documentation:
+   *  Manual positioning of feedback icons is required for [...] input groups
+   *  with an add-on on the right. [...] For input groups, adjust the right
+   *  value to an appropriate pixel value depending on the width of your addon.
+   */
+  adjustFeedbackIcons: on('didInsertElement', observer('hasFeedback', 'formLayout', function() {
+    run.scheduleOnce('afterRender', () => {
+      // validation state icons are only shown if form element has feedback
+      if (this.get('hasFeedback') && !this.get('isDestroying')) {
+        // form group element has
+        this.$()
+          // an input-group
+          .has('.input-group')
+          // an addon or button on right si de
+          .has('.input-group input + .input-group-addon, .input-group input + .input-group-btn')
+          // an icon showing validation state
+          .has('.form-control-feedback')
+          .each((i, formGroups) => {
+            // clear existing adjustment
+            this.$('.form-control-feedback').css('right', '');
+            let feedbackIcon = this.$('.form-control-feedback', formGroups);
+            let defaultPositionString = feedbackIcon.css('right');
+            Ember.assert(
+              defaultPositionString.substr(-2) === 'px',
+              '.form-control-feedback css right units other than px are not supported'
+            );
+            let defaultPosition = parseInt(
+              defaultPositionString.substr(0, defaultPositionString.length - 2)
+            );
+            // Bootstrap documentation:
+            //  We do not support multiple add-ons (.input-group-addon or .input-group-btn) on a single side.
+            // therefore we could rely on having only one input-group-addon or input-group-btn
+            let inputGroupWidth = this.$('input + .input-group-addon, input + .input-group-btn', formGroups).outerWidth();
+            let adjustedPosition = defaultPosition + inputGroupWidth;
+
+            feedbackIcon.css('right', adjustedPosition);
+          });
+      }
+    });
+  }))
 });

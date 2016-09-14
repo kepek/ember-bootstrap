@@ -1,8 +1,9 @@
 import Ember from 'ember';
 import config from './config/environment';
 
-let Router = Ember.Router.extend({
-  location: config.locationType
+const Router = Ember.Router.extend({
+  location: config.locationType,
+  rootURL: config.rootURL
 });
 
 Router.map(function() {
@@ -14,6 +15,11 @@ Router.map(function() {
   this.route('collapse');
   this.route('modal');
   this.route('progress');
+  this.route('navs');
+  this.route('navbars');
+  this.route('tabs', function() {
+    this.route('other');
+  });
 });
 
 export default Router;

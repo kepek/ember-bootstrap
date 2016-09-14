@@ -1,3 +1,98 @@
+<a name"0.9.1"></a>
+### 0.9.1 (2016-08-20)
+
+
+#### Bug Fixes
+
+* **Modal:** perform cleanup when removing an opened modal from DOM without waiting for transition. Thanks to [sukima](https://github.com/sukima) ([e863f71f](https://github.com/kaliber5/ember-bootstrap/commit/e863f71f))
+
+
+#### Features
+
+* **FormElement:** adds `showValidationOn` events. Thanks to [jelhan](https://github.com/jelhan) (#127) ([2eb7ac07](https://github.com/kaliber5/ember-bootstrap/commit/2eb7ac07))
+
+
+<a name"0.9.0"></a>
+## 0.9.0 (2016-08-13)
+
+
+#### Bug Fixes
+
+* **Dropdown:** removed data-toggle="dropdown" attribute to prevent clash if original bootstrap is present. ([bf44d272](https://github.com/kaliber5/ember-bootstrap/commit/bf44d272), closes [#115](https://github.com/kaliber5/ember-bootstrap/issues/115))
+* **Form:** fixed novalidate attribute being a string value of "false" or "true" ([45db61dd](https://github.com/kaliber5/ember-bootstrap/commit/45db61dd))
+* **General:**
+  * fix Ember.Array.contains deprecation in Ember 2.8+ ([700802f0](https://github.com/kaliber5/ember-bootstrap/commit/700802f0))
+  * fix Ember.Handlebars.SafeString deprecation in Ember 2.8+ ([09d5a245](https://github.com/kaliber5/ember-bootstrap/commit/09d5a245))
+
+
+#### Features
+
+* **AccordionItem:** Add expanded class name for accordion item. ([268bc0d3](https://github.com/kaliber5/ember-bootstrap/commit/268bc0d3))
+* **Dropdown:** support "dropup" style ([f7813087](https://github.com/kaliber5/ember-bootstrap/commit/f7813087), closes [#114](https://github.com/kaliber5/ember-bootstrap/issues/114))
+* **Navbar:** added set of components for creating navbars. Thanks to [srvance](https://github.com/srvance) for implementation ([6065a0b4](https://github.com/kaliber5/ember-bootstrap/commit/6065a0b4), closes [#48](https://github.com/kaliber5/ember-bootstrap/issues/48))
+
+
+<a name"0.8.0"></a>
+## 0.8.0 (2016-07-02)
+
+
+#### Bug Fixes
+
+* **ButtonGroup:** allow value 0 (Number) as valid value for a bs-button (#105). Thanks to [arohr](https://github.com/arohr) ([d770cf67](https://github.com/kaliber5/ember-bootstrap/commit/d770cf67))
+
+
+#### Features
+
+* **Nav:** added components bs-nav and bs-nav-item for bootstrap navs ([dc66fe7b](https://github.com/kaliber5/ember-bootstrap/commit/dc66fe7b))
+* **Tab:** added components bs-tab and bs-tab-pane for dynamic tabs ([d3e2725b](https://github.com/kaliber5/ember-bootstrap/commit/d3e2725b))
+* **FormElement:** support validations with warning messages (supported by ember-cp-validations 3.0 ([cd324d16](https://github.com/kaliber5/ember-bootstrap/commit/cd324d16))
+
+
+<a name"0.7.3"></a>
+### 0.7.3 (2016-06-22)
+
+
+#### Bug Fixes
+
+* **ComponentChildMixin:** this.nearestOfType() is not reliable in willDestroyElement hook. Thanks to [jelhan](https://github.com/jelhan) ([44a9fa0f](https://github.com/kaliber5/ember-bootstrap/commit/44a9fa0f), closes [#99](https://github.com/kaliber5/ember-bootstrap/issues/99))
+* **Build:** import map file along with bootstrap-theme.css. Thanks to [williamherry](https://github.com/williamherry)
+* **Form:** update showValidations on form elements wrapped by another component. Thanks to [jelhan](https://github.com/jelhan)
+
+#### Features
+
+* **FormElement:** adds support for invisible (sr-only) label. Thanks to [jelhan](https://github.com/jelhan) ([8419f35e](https://github.com/kaliber5/ember-bootstrap/commit/8419f35e))
+* **FormElement:** yield validation state. Thanks to [jelhan](https://github.com/jelhan) ([5f28d1e1](https://github.com/kaliber5/ember-bootstrap/commit/5f28d1e1))
+* **FormElement:** adjust position of feedback items if there is input group. Thanks to [jelhan](https://github.com/jelhan)
+
+
+<a name"0.7.2"></a>
+### 0.7.2 (2016-05-29)
+
+#### Bug Fixes
+
+* **Alert:** fixed fade out animation
+* **FormElement:** fixed overriding form model by setting bs-form-element model. Thanks to [jelhan](https://github.com/jelhan)
+
+#### Features
+
+* **Fastboot:** Fixed breaking apps in Fastboot environment. Thanks to [openhouse](https://github.com/openhouse). Fastboot is now officially supported and automatically tested.
+* **Button:** add support for returning a promise from a closure action to support automatic state change ([fb8fa1e3](https://github.com/kaliber5/ember-bootstrap/commit/fb8fa1e3), closes [#87](https://github.com/kaliber5/ember-bootstrap/issues/87))
+* **Form:** adds support for novalidate attribute. Thanks to [jelhan](https://github.com/jelhan)
+
+<a name"0.7.1"></a>
+### 0.7.1 (2016-05-11)
+
+
+#### Bug Fixes
+
+* **FormElement:** fixed validation property dependent keys ([16903155](https://github.com/kaliber5/ember-bootstrap/commit/16903155))
+
+
+#### Features
+
+* **Less Import:** import Bootstrap's less assets simply by importing 'ember-bootstrap/bootstrap' in your app.less ([ab38b9d5](https://github.com/kaliber5/ember-bootstrap/commit/ab38b9d5), closes [#80](https://github.com/kaliber5/ember-bootstrap/issues/80))
+
+
 <a name"0.7.0"></a>
 ## 0.7.0 (2016-04-02)
 

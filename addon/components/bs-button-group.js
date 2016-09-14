@@ -26,9 +26,9 @@ const { computed, observer } = Ember;
 
  ```handlebars
  {{#bs-button-group value=buttonGroupValue type="radio"}}
-   {{#bs-button value=1}}1{{/bs-button}}
-   {{#bs-button value=2}}2{{/bs-button}}
-   {{#bs-button value=3}}3{{/bs-button}}
+   {{#bs-button value='foo'}}foo{{/bs-button}}
+   {{#bs-button value='bar'}}bar{{/bs-button}}
+   {{#bs-button value='baz'}}baz{{/bs-button}}
  {{/bs-button-group}}
 
  You selected: {{buttonGroupValue}}!
@@ -41,9 +41,9 @@ const { computed, observer } = Ember;
 
  ```handlebars
  {{#bs-button-group value=buttonGroupValue type="checkbox"}}
-   {{#bs-button value=1}}1{{/bs-button}}
-   {{#bs-button value=2}}2{{/bs-button}}
-   {{#bs-button value=3}}3{{/bs-button}}
+   {{#bs-button value='foo'}}foo{{/bs-button}}
+   {{#bs-button value='bar'}}bar{{/bs-button}}
+   {{#bs-button value='baz'}}baz{{/bs-button}}
  {{/bs-button-group}}
 
  You selected:
@@ -169,7 +169,7 @@ export default Ember.Component.extend(ComponentParent, SizeClass, {
     let values = Ember.A(!Ember.isArray(value) ? [value] : value);
     this.get('children')
       .forEach(function(button) {
-        button.set('active', values.contains(button.get('value')));
+        button.set('active', values.includes(button.get('value')));
       });
   }),
 
@@ -210,7 +210,7 @@ export default Ember.Component.extend(ComponentParent, SizeClass, {
           value = this.get('activeChildren').mapBy('value');
           break;
       }
-      if (value) {
+      if (typeof value !== 'undefined') {
         this.set('value', value);
       }
       // remember activeChildren, used as a replacement for a before observer as they will be deprecated in the future...

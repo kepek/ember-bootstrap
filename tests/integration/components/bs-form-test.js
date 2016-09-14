@@ -1,6 +1,7 @@
 import { moduleForComponent, test } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
 import Ember from 'ember';
+// import EmberValidations from 'ember-validations';
 
 moduleForComponent('bs-form', 'Integration | Component | bs-form', {
   integration: true
@@ -22,25 +23,32 @@ test('form has correct CSS class', function(assert) {
 });
 
 test('Submitting the form calls default action', function(assert) {
-  this.on('testAction', () => {
+  let model = {};
+  this.set('model', model);
+  this.on('testAction', (m) => {
     assert.ok(true, 'Default action has been called.');
+    assert.equal(m, model, 'Action invocation has model as parameter');
   });
-  this.render(hbs`{{#bs-form action=(action "testAction")}}Test{{/bs-form}}`);
+  this.render(hbs`{{#bs-form model=model action=(action "testAction")}}Test{{/bs-form}}`);
 
-  assert.expect(1);
+  assert.expect(2);
   this.$('form').submit();
 });
 
 test('Submitting the form calls before submit action', function(assert) {
-  this.on('beforeAction', () => {
+  let model = {};
+  this.set('model', model);
+  this.on('beforeAction', (m) => {
     assert.ok(true, 'Before action has been called.');
+    assert.equal(m, model, 'Action invocation has model as parameter');
   });
-  this.on('submitAction', () => {
+  this.on('submitAction', (m) => {
     assert.ok(true, 'Default action has been called.');
+    assert.equal(m, model, 'Action invocation has model as parameter');
   });
-  this.render(hbs`{{#bs-form before=(action "beforeAction") action=(action "submitAction")}}Test{{/bs-form}}`);
+  this.render(hbs`{{#bs-form model=model before=(action "beforeAction") action=(action "submitAction")}}Test{{/bs-form}}`);
 
-  assert.expect(2);
+  assert.expect(4);
   this.$('form').submit();
 });
 
@@ -127,3 +135,55 @@ test('Pressing enter on a form with submitOnEnter submits the form', function(as
 
   this.$('form').trigger(e);
 });
+
+test('supports novalidate attribute', function(assert) {
+  assert.expect(2);
+  this.render(hbs`{{bs-form}}`);
+  assert.ok(
+    this.$('form').attr('novalidate') === undefined,
+    'defaults to false'
+  );
+  this.render(hbs`{{bs-form novalidate=true}}`);
+  assert.ok(
+    this.$('form').attr('novalidate') === ''
+  );
+});
+
+// test('shows validation errors on submit', function(assert) {
+//   assert.expect(3);
+//   this.set('model',
+//     Ember.Object.extend(EmberValidations, {
+//       name: null,
+//       validations: {
+//         name: {
+//           presence: true
+//         }
+//       }
+//     }).create({
+//       container: this.get('container')
+//     })
+//   );
+//   this.render(hbs`
+//     {{#bs-form model=model}}
+//       {{bs-form-element property='name' classNames='child'}}
+//       {{#dummy-component}}
+//         {{bs-form-element property='name' classNames='grandchild'}}
+//       {{/dummy-component}}
+//     {{/bs-form}}
+//   `);
+//   assert.ok(
+//     this.$('form .has-error').length === 0,
+//     'validation errors aren\'t shown before user interaction'
+//   );
+//   Ember.run(() => {
+//     this.$('form').submit();
+//   });
+//   assert.ok(
+//     this.$('form .form-group.child').hasClass('has-error'),
+//     'validation errors are shown after form submission (child)'
+//   );
+//   assert.ok(
+//     this.$('form .form-group.grandchild').hasClass('has-error'),
+//     'validation errors are shown after form submission (grandchild)'
+//   );
+// });

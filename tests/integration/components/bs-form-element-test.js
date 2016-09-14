@@ -79,27 +79,6 @@ test('controlType "textarea" is supported', function(assert) {
   labeledControlTest.call(this, assert, 'textarea', 'textarea');
 });
 
-test('controlType "select" is supported', function(assert) {
-  let options = {
-    choices: Ember.A([
-      {
-        id: 'f',
-        label: 'Female'
-      },
-      {
-        id: 'm',
-        label: 'Male'
-      }
-    ]),
-    choiceLabelProperty: 'label',
-    choiceValueProperty: 'id'
-  };
-  controlTypeSupportTest.call(this, assert, 'select', 'select', [options.choices[0], options.choices[1]], function() {
-    return options.choices.findBy('id', this.val());
-  }, options);
-  labeledControlTest.call(this, assert, 'select', 'select');
-});
-
 test('Changing formLayout changes markup', function(assert) {
   this.set('formLayout', 'vertical');
   this.render(hbs`{{#bs-form horizontalLabelGridClass="col-sm-4" formLayout=formLayout}}{{bs-form-element controlType="text" label="myLabel"}}{{/bs-form}}`);
@@ -117,18 +96,25 @@ test('Changing formLayout changes markup', function(assert) {
 });
 
 test('Custom controls are supported', function(assert) {
-  this.set('gender', 'male');
+  this.set('model',
+    Ember.Object.create({
+      gender: 'male'
+    })
+  );
   this.render(hbs`
-    {{#bs-form formLayout=formLayout model=this}}
-    {{#bs-form-element label="Gender" property="gender" as |value|}}
-      <div id="value">{{value}}</div>
-    {{/bs-form-element}}
+    {{#bs-form model=model}}
+      {{#bs-form-element label="Gender" property="gender" validation="success" as |value id validation|}}
+        <div id="value">{{value}}</div>
+        <div id="id">{{id}}</div>
+        <div id="validation">{{validation}}</div>
+      {{/bs-form-element}}
     {{/bs-form}}
   `);
 
   assert.equal(this.$('#value').length, 1, 'block template is rendered');
   assert.equal(this.$('#value').text().trim(), 'male', 'value is yielded to block template');
-
+  assert.equal(this.$('#id').text().trim(), `${$('.form-group').attr('id')}-field`, 'id is yielded to block template');
+  assert.equal(this.$('#validation').text().trim(), 'success');
 });
 
 test('required property propagates', function(assert) {
@@ -140,15 +126,6 @@ test('required property propagates', function(assert) {
   assert.equal(this.$('input').attr('required'), 'required', 'input html5 required is true');
 });
 
-test('required property propagates - select', function(assert) {
-  this.set('model', Ember.Object.create());
-
-  this.render(hbs`{{bs-form-element controlType="select" label="myLabel" property="foo" required=true}}`);
-
-  assert.ok(this.$('.form-group').hasClass('is-required'), 'component has is-required class');
-  assert.equal(this.$('select').attr('required'), 'required', 'input html5 required is true');
-});
-
 test('disabled property propagates', function(assert) {
   this.set('model', Ember.Object.create());
 
@@ -158,11 +135,202 @@ test('disabled property propagates', function(assert) {
   assert.equal(this.$('input').attr('disabled'), 'disabled', 'input html5 disabled is true');
 });
 
-test('disabled property propagates - select', function(assert) {
-  this.set('model', Ember.Object.create());
+test('if invisibleLabel is true sr-only class is added to label', function(assert) {
+  let formLayouts = [
+    'vertical',
+    'horizontal',
+    'inline'
+  ];
+  this.render(hbs`{{bs-form-element label="myLabel"}}`);
+  assert.notOk(this.$('label').hasClass('sr-only'), `sr-only class is not present as defaultText`);
+  formLayouts.forEach((formLayout) => {
+    this.render(hbs`{{#bs-form formLayout=formLayout }}{{bs-form-element label="myLabel" invisibleLabel=true}}{{/bs-form}}`);
+    assert.ok(this.$('label').hasClass('sr-only'), `sr-only class is present for formLayout ${formLayout}`);
+  });
+});
 
-  this.render(hbs`{{bs-form-element controlType="select" label="myLabel" property="foo" disabled=true}}`);
+test('adjusts validation icon position if there is an input group', function(assert) {
+  assert.expect(6);
+  this.set('validation', 'success');
+  this.set('formLayout', 'vertical');
+  this.render(hbs`
+    {{#bs-form formLayout=formLayout}}
+      {{#bs-form-element validation=validation label='ajusts validation icon position' classNames='addon'}}
+        <div class="input-group">
+          {{bs-input}}
+          <div class="input-group-addon">
+            @example.com
+          </div>
+        </div>
+      {{/bs-form-element}}
+      {{#bs-form-element validation=validation label='ajusts validation icon position' classNames='button'}}
+        <div class="input-group">
+          {{bs-input}}
+          <div class="input-group-btn">
+            <button class="btn btn-default" type="button">foo</button>
+            <button class="btn btn-default" type="button">bar</button>
+          </div>
+        </div>
+      {{/bs-form-element}}
+    {{/bs-form}}
+  `);
+  // assumption on bootstrap defaults:
+  // feedback icons does have right: 0px for vertical forms
+  // https://github.com/twbs/bootstrap/blob/v3.3.6/less/forms.less#L400-L403
+  assert.equal(
+    this.$('.addon .form-control-feedback').css('right'),
+    `${this.$('.addon .input-group-addon').outerWidth()}px`,
+    'works for addon on init'
+  );
+  assert.equal(
+    this.$('.button .form-control-feedback').css('right'),
+    `${this.$('.button .input-group-btn').outerWidth()}px`,
+    'works for button on init'
+  );
+  let expectedRightValue = this.$('.addon .form-control-feedback').css('right');
+  this.set('validation', null);
+  assert.ok(
+    this.$().has('.form-control-feedback').length === 0,
+    'assumption'
+  );
+  this.set('validation', 'error');
+  assert.equal(
+    this.$('.addon .form-control-feedback').css('right'),
+    expectedRightValue,
+    'adjusts correctly after validation changed from null'
+  );
+  this.set('validation', 'success');
+  this.$('.addon input').val('foo').trigger('change');
+  assert.equal(
+    this.$('.addon .form-control-feedback').css('right'),
+    expectedRightValue,
+    'adjusts correctly after validation changed form error to success'
+  );
+  // assumption on bootstrap defaults:
+  // feedback icons does have right: 15px for horizontal forms
+  // https://github.com/twbs/bootstrap/blob/v3.3.6/less/forms.less#L589-L591
+  // https://github.com/twbs/bootstrap/blob/v3.3.6/less/variables.less#L326-L327
+  this.set('formLayout', 'horizontal');
+  /* PhantomJS 1.9 used by travis fails test due to a positioning or rounding issue.
+   * PhantomJS 2.x and all major browsers are fine.
+   * Replace test above by the strict one after travis upgraded PhantomJS finally.
+  assert.equal(
+    this.$('.addon .form-control-feedback').css('right'),
+    `${this.$('.addon .input-group-addon').outerWidth() + 15}px`,
+    'takes bootstrap default positioning into account'
+  );
+  */
+  let gap = parseInt(this.$('.addon .form-control-feedback').css('right')) -
+            this.$('.addon .input-group-addon').outerWidth() - 15;
+  assert.ok(
+    gap === 0 || gap === -1,
+    'takes bootstrap default positioning into account'
+  );
+});
 
-  assert.ok(this.$('.form-group').hasClass('is-disabled'), 'component has is-disabled class');
-  assert.equal(this.$('select').attr('disabled'), 'disabled', 'input html5 disabled is true');
+test('shows validation errors', function(assert) {
+  this.set('errors', Ember.A(['Invalid']));
+  this.set('model', Ember.Object.create({ name: null }));
+  this.render(hbs`
+      {{bs-form-element property='name' elementId='child' hasValidator=true errors=errors model=model}}
+  `);
+  assert.notOk(
+    this.$('.form-group').hasClass('has-error'),
+    'validation errors aren\'t shown before user interaction'
+  );
+  Ember.run(() => {
+    this.$('input').trigger('focusout');
+  });
+  assert.ok(
+    this.$('.form-group').hasClass('has-error'),
+    'validation errors are shown after user interaction when errors are present (child)'
+  );
+  assert.equal(this.$('.form-group .help-block').text().trim(), 'Invalid');
+  Ember.run(() => {
+    this.set('errors', Ember.A());
+  });
+  assert.notOk(
+    this.$('.form-group').hasClass('has-error'),
+    'form group isn\'t shown as having errors if there aren\'t any'
+  );
+});
+
+test('shows validation warnings', function(assert) {
+  this.set('warnings', Ember.A(['Insecure']));
+  this.set('model', Ember.Object.create({ name: null }));
+  this.render(hbs`
+      {{bs-form-element property='name' elementId='child' hasValidator=true warnings=warnings model=model}}
+  `);
+  assert.notOk(
+    this.$('.form-group').hasClass('has-warning'),
+    'validation warnings aren\'t shown before user interaction'
+  );
+  Ember.run(() => {
+    this.$('input').trigger('focusout');
+  });
+  assert.ok(
+    this.$('.form-group').hasClass('has-warning'),
+    'validation warnings are shown after user interaction when warnings are present'
+  );
+  assert.equal(this.$('.form-group .help-block').text().trim(), 'Insecure');
+  Ember.run(() => {
+    this.set('warnings', Ember.A());
+  });
+  assert.notOk(
+    this.$('.form-group').hasClass('has-warning'),
+    'form group isn\'t shown as having warnings if there are\'t any'
+  );
+});
+
+test('events enabling validation rendering are configurable per `showValidationOn` (array)', function(assert) {
+  this.set('errors', Ember.A(['Invalid']));
+  this.set('model', Ember.Object.create({ name: null }));
+  this.set('showValidationOn', ['change']);
+  this.render(hbs`
+      {{bs-form-element property='name' elementId='child' hasValidator=true errors=errors model=model showValidationOn=showValidationOn}}
+  `);
+  assert.notOk(
+    this.$('.form-group').hasClass('has-error'),
+    'validation warnings aren\'t shown before user interaction'
+  );
+  Ember.run(() => {
+    this.$('input').trigger('focusout');
+  });
+  assert.notOk(
+    this.$('.form-group').hasClass('has-error'),
+    'events not present in `showValidationOn` are ignored'
+  );
+  Ember.run(() => {
+    this.$('input').trigger('change');
+  });
+  assert.ok(
+    this.$('.form-group').hasClass('has-error'),
+    'events present in `showValidationOn` trigger validation'
+  );
+});
+
+test('events enabling validation rendering are configurable per `showValidationOn` (string)', function(assert) {
+  this.set('errors', Ember.A(['Invalid']));
+  this.set('model', Ember.Object.create({ name: null }));
+  this.render(hbs`
+      {{bs-form-element property='name' elementId='child' hasValidator=true errors=errors model=model showValidationOn='change'}}
+  `);
+  assert.notOk(
+    this.$('.form-group').hasClass('has-error'),
+    'validation warnings aren\'t shown before user interaction'
+  );
+  Ember.run(() => {
+    this.$('input').trigger('focusout');
+  });
+  assert.notOk(
+    this.$('.form-group').hasClass('has-error'),
+    'events not present in `showValidationOn` are ignored'
+  );
+  Ember.run(() => {
+    this.$('input').trigger('change');
+  });
+  assert.ok(
+    this.$('.form-group').hasClass('has-error'),
+    'events present in `showValidationOn` trigger validation'
+  );
 });

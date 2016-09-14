@@ -202,7 +202,7 @@ export default Ember.Component.extend({
    * @default false
    * @private
    */
-  showBackdrop: false,
+  showBackdrop: computed.and('open', 'backdrop'),
 
   /**
    * Closes the modal when escape key is pressed.
@@ -353,6 +353,15 @@ export default Ember.Component.extend({
   renderInPlace: false,
 
   /**
+   * @property _renderInPlace
+   * @type boolean
+   * @private
+   */
+  _renderInPlace: computed('renderInPlace', function() {
+    return this.get('renderInPlace') || typeof Ember.$ !== 'function' || Ember.$('#ember-bootstrap-modal-container').length === 0;
+  }),
+
+  /**
    * The action to be sent when the modal footer's submit button (if present) is pressed.
    * Note that if your modal body contains a form (e.g. [Components.Form](Components.Form.html){{/crossLink}}) this action will
    * not be triggered. Instead a submit event will be triggered on the form itself. See the class description for an
@@ -491,7 +500,7 @@ export default Ember.Component.extend({
         this.sendAction('openedAction');
       }
     };
-    Ember.run.scheduleOnce('afterRender', this, this.handleBackdrop, callback);
+    this.handleBackdrop(callback);
   },
 
   /**
@@ -550,21 +559,17 @@ export default Ember.Component.extend({
         return;
       }
 
-      let waitForFade = function() {
-        let $backdrop = this.get('backdropElement');
-        Ember.assert('Backdrop element should be in DOM', $backdrop && $backdrop.length > 0);
-
-        if (doAnimate) {
+      if (doAnimate) {
+        Ember.run.schedule('afterRender', this, function() {
+          let $backdrop = this.get('backdropElement');
+          Ember.assert('Backdrop element should be in DOM', $backdrop && $backdrop.length > 0);
           $backdrop
             .one('bsTransitionEnd', Ember.run.bind(this, callback))
             .emulateTransitionEnd(Modal.BACKDROP_TRANSITION_DURATION);
-        } else {
-          callback.call(this);
-        }
-      };
-
-      Ember.run.scheduleOnce('afterRender', this, waitForFade);
-
+        });
+      } else {
+        callback.call(this);
+      }
     } else if (!this.get('open') && this.get('backdrop')) {
       let $backdrop = this.get('backdropElement');
       Ember.assert('Backdrop element should be in DOM', $backdrop && $backdrop.length > 0);
@@ -690,6 +695,7 @@ export default Ember.Component.extend({
   willDestroyElement() {
     Ember.$(window).off('resize.bs.modal');
     Ember.$('body').removeClass('modal-open');
+    this.resetScrollbar();
   }
 
 });
